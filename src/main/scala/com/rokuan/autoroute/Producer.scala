@@ -20,4 +20,8 @@ object Producer {
     case PNil => Nil
     case head +:: tail => head :: producterToList(tail)
   }
+  implicit def listToProducer[T](l: List[T]): Producer[T] = l match {
+    case Nil => PNil
+    case head :: tail => +::(head, listToProducer(tail))
+  }
 }

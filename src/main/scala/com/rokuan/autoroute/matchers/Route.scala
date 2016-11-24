@@ -5,7 +5,9 @@ import com.rokuan.autoroute.Producer
 /**
   * Created by Christophe on 23/11/2016.
   */
-class Route[T, K, R](val transformers: List[Transformer[T, K, R]]) {
+case class Route[T, K, R](val transformers: List[Transformer[T, K, R]]) {
+  def this(transformer: Transformer[T, K, R]) = this(List(transformer))
+
   def apply(p: Producer[K]): R = {
     def internalApply(tr: List[Transformer[T, K, R]], p: Producer[K]): R = {
       tr match {
@@ -18,4 +20,10 @@ class Route[T, K, R](val transformers: List[Transformer[T, K, R]]) {
     }
     internalApply(transformers, p)
   }
+}
+
+object Route {
+  implicit def transformerToRoute[T, K, R](transformer: Transformer[T, K, R]) = new Route(List(transformer))
+  implicit def transformerListToRoute[T, K, R](transformers: List[Transformer[T, K, R]]) = new Route(transformers)
+  //def route[T, K, R](transformers: List[Transformer[T, K, R]]) = new Route(transformers)
 }

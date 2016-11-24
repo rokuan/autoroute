@@ -8,11 +8,11 @@ import scala.collection.mutable.ListBuffer
 /**
   * Created by Christophe on 21/11/2016.
   */
-trait Rule[ProductType <: Any, TerminalType] {
+trait Rule[ProductType, TerminalType] {
   final def ? : OptionalRule[ProductType, TerminalType] = new OptionalRule[ProductType, TerminalType](this)
   final def + : NonEmptyList[ProductType, TerminalType] = new NonEmptyList[ProductType, TerminalType](this)
   final def * : PossibleEmptyList[ProductType, TerminalType] = new PossibleEmptyList[ProductType, TerminalType](this)
-  final def ~(other: Rule[_, TerminalType]) : NonTerminalState[TerminalType] = new NonTerminalState[TerminalType](this :: List(other))
+  final def ~[L](other: Rule[L, TerminalType]) : NonTerminalState[TerminalType] = new NonTerminalState[TerminalType](this :: List(other))
   def product(l: Producer[TerminalType]): Option[(ProductType, Producer[TerminalType])]
 }
 
@@ -58,7 +58,7 @@ class NonTerminalState[T](val rules: List[Rule[_, T]]) extends Rule[List[_], T] 
     productFold(new ListBuffer[Any](), rules, l)
   }
 
-  def apply(matcher: List[Any] => T) = new ListTransformer(this, matcher)
+  def apply[R](matcher: List[Any] => R) = new ListTransformer(this, matcher)
 }
 
 class TerminalState[T](val v: T) extends Rule[T, T] {
