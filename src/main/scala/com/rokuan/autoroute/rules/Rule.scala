@@ -1,7 +1,7 @@
 package com.rokuan.autoroute.rules
 
 import com.rokuan.autoroute.Producer
-import com.rokuan.autoroute.matchers.{ListTransformer, OptionalTransformer, SimpleTransformer}
+import com.rokuan.autoroute.matchers.{ListTransformer, OptionalTransformer, SimpleTransformer, Transformer}
 
 import scala.collection.mutable.ListBuffer
 
@@ -14,6 +14,10 @@ trait Rule[ProductType, TerminalType] {
   final def * : PossibleEmptyList[ProductType, TerminalType] = new PossibleEmptyList[ProductType, TerminalType](this)
   final def ~[L](other: Rule[L, TerminalType]) : NonTerminalState[TerminalType] = new NonTerminalState[TerminalType](this :: List(other))
   def product(l: Producer[TerminalType]): Option[(ProductType, Producer[TerminalType])]
+}
+
+class IdentityRule[T, K, R](val transformer: Transformer[T, K, R]) extends Rule[R, K] {
+  override def product(l: Producer[K]): Option[(R, Producer[K])] = transformer.produce(l)
 }
 
 class NonEmptyList[T, K](val underlying: Rule[T, K]) extends Rule[List[T], K] {
@@ -75,6 +79,8 @@ object TerminalState {
 }
 
 object Rule {
+  def opt[T, K](rule: Rule[T, K]) = new OptionalRule[T, K](rule)
+  def list[T, K](rule: Rule[T, K]) = new NonEmptyList[T, K](rule)
   def token[T](t: T) = TerminalState.tokenToTerminal(t)
 
   def internalProduct[T, K](underlying: Rule[T, K], acc: ListBuffer[T], l: Producer[K]): Option[(List[T], Producer[K])] = {

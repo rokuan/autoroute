@@ -16,9 +16,9 @@ case object PNil extends Producer[Nothing] {
 }
 
 object Producer {
-  implicit def producterToList[T](p: Producer[T]): List[T] = p match {
+  implicit def producerToList[T](p: Producer[T]): List[T] = p match {
     case PNil => Nil
-    case head +:: tail => head :: producterToList(tail)
+    case head +:: tail => head :: producerToList(tail)
   }
   implicit def listToProducer[T](l: List[T]): Producer[T] = l match {
     case Nil => PNil
