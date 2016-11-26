@@ -3,20 +3,12 @@ package com.rokuan.autoroute.matchers
 import com.rokuan.autoroute.Producer
 import com.rokuan.autoroute.rules._
 
-import scala.util.Try
 
 /**
   * Created by Christophe on 23/11/2016.
   */
-trait Transformer[T <: Any, K, R] {
-  def produce(p: Producer[K]): Option[(R, Producer[K])]
+trait Transformer[T <: Any, K, R] extends Rule[R, K]{
   def |[S <: Any](transformer: AbstractTransformer[S, K, R]): Transformer[Any, K, R]
-  def ~[S](rule: Rule[S, K]) = new IdentityRule[T, K, R](this) ~ rule
-  //def apply[S](m: R => S) = new SimpleTransformer(Transformer.transformerToRule(this), m)
-}
-
-object Transformer {
-  def transformerToRule[T, K, R](t: Transformer[T, K, R]) = new IdentityRule[T, K, R](t)
 }
 
 trait AbstractTransformer[T <: Any, K, R] extends Transformer[T, K, R] {
@@ -24,7 +16,7 @@ trait AbstractTransformer[T <: Any, K, R] extends Transformer[T, K, R] {
   def transform: T => R
 
   override def produce(p: Producer[K]): Option[(R, Producer[K])] =
-    rule.product(p).map {
+    rule.produce(p).map {
       case (result, left) => Some(transform(result), left)
     }.getOrElse(None)
 
@@ -48,7 +40,7 @@ class ListTransformer[K, R](val rule: NonTerminalState[K], m: List[Any] => R) ex
   override def transform: List[Any] => R = m
 }
 
-class MultipleTransformer[K, R](val transformers: List[Transformer[_ <:Any, K, R]]) extends Transformer[Any, K, R] {
+class MultipleTransformer[K, R](val transformers: List[Transformer[_ <: Any, K, R]]) extends Transformer[Any, K, R] {
   override def produce(p: Producer[K]): Option[(R, Producer[K])] = {
     def internalProduct(ts: List[Transformer[_ <: Any, K, R]], p: Producer[K]): Option[(R, Producer[K])] = {
       ts match {
