@@ -1,7 +1,7 @@
 package com.rokuan.autoroute.rules
 
 import com.rokuan.autoroute.Producer
-import com.rokuan.autoroute.matchers.{ListTransformer, OptionalTransformer, Transformer}
+import com.rokuan.autoroute.matchers._
 
 import scala.collection.mutable.ListBuffer
 
@@ -14,6 +14,7 @@ trait Rule[ProductType, TerminalType] {
   final def * : PossibleEmptyList[ProductType, TerminalType] = new PossibleEmptyList[ProductType, TerminalType](this)
   def ~[L](other: Rule[L, TerminalType]) : NonTerminalState[TerminalType] = new NonTerminalState[TerminalType](List(this, other))
   def produce(l: Producer[TerminalType]): Option[(ProductType, Producer[TerminalType])]
+  def apply[R](matcher: ProductType => R) = new BasicTransformer(this, matcher)
 }
 
 class NonEmptyList[T, K](val underlying: Rule[T, K]) extends Rule[List[T], K] {
@@ -24,6 +25,8 @@ class NonEmptyList[T, K](val underlying: Rule[T, K]) extends Rule[List[T], K] {
       internalProduct(underlying, (new ListBuffer[T]() += result), tail)
     }.getOrElse(None)
   }
+
+  //def apply[R](matcher: List[T] => R) = new SimpleTransformer(matcher)
 }
 
 class PossibleEmptyList[T, K](val underlying: Rule[T, K]) extends Rule[List[T], K] {
@@ -40,7 +43,7 @@ class OptionalRule[T, K](val underlying: Rule[T, K]) extends Rule[Option[T], K] 
       .getOrElse(Some(None, l))
   }
 
-  def apply[R](matcher: Option[T] => R) = new OptionalTransformer(this, matcher)
+  //def apply[R](matcher: Option[T] => R) = new OptionalTransformer(this, matcher)
 }
 
 class NonTerminalState[T](val rules: List[Rule[_, T]]) extends Rule[List[_], T] {
@@ -61,20 +64,28 @@ class NonTerminalState[T](val rules: List[Rule[_, T]]) extends Rule[List[_], T] 
     productFold(new ListBuffer[Any](), rules, l)
   }
 
-  def apply[R](matcher: List[Any] => R) = new ListTransformer(this, matcher)
+  //def apply[R](matcher: List[Any] => R) = new ListTransformer(this, matcher)
 }
 
-class TerminalState[T](val v: T) extends Rule[T, T] {
+trait TerminalState[T] extends Rule[T, T] {
   import com.rokuan.autoroute.+::
 
   override def produce(l: Producer[T]): Option[(T, Producer[T])] = l match {
-    case head +:: tail if v == head => Some(v, tail)
+    case head +:: tail if valueMatches(head) => Some(head, tail)
     case _ => None
   }
+
+  def valueMatches(t: T): Boolean
+
+  //def apply[R](matcher: T => R) = new SimpleTransformer(this, matcher)
+}
+
+class SimpleTerminalState[T](val v: T) extends TerminalState[T] {
+  override def valueMatches(t: T): Boolean = v == t
 }
 
 object TerminalState {
-  implicit def tokenToTerminal[T](t: T) = new TerminalState[T](t)
+  implicit def tokenToTerminal[T](t: T) = new SimpleTerminalState[T](t)
 }
 
 object Rule {
