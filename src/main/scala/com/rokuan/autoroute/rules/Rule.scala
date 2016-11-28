@@ -2,19 +2,27 @@ package com.rokuan.autoroute.rules
 
 import com.rokuan.autoroute.Producer
 import com.rokuan.autoroute.matchers._
+import shapeless.HList
 
 import scala.collection.mutable.ListBuffer
 
 /**
   * Created by Christophe on 21/11/2016.
   */
-trait Rule[ProductType, TerminalType] {
-  final def ? : OptionalRule[ProductType, TerminalType] = new OptionalRule[ProductType, TerminalType](this)
+trait Rule[+ProductType <: Any, TerminalType] {
+  /*final def ? : OptionalRule[ProductType, TerminalType] = new OptionalRule[ProductType, TerminalType](this)
   final def + : NonEmptyList[ProductType, TerminalType] = new NonEmptyList[ProductType, TerminalType](this)
   final def * : PossibleEmptyList[ProductType, TerminalType] = new PossibleEmptyList[ProductType, TerminalType](this)
   def ~[L](other: Rule[L, TerminalType]) : NonTerminalState[TerminalType] = new NonTerminalState[TerminalType](List(this, other))
   def produce(l: Producer[TerminalType]): Option[(ProductType, Producer[TerminalType])]
-  def apply[R](matcher: ProductType => R) = new BasicTransformer(this, matcher)
+  def apply[R](matcher: ProductType => R) = new BasicTransformer(this, matcher)*/
+
+  final def ?[R >: ProductType]: OptionalRule[R, TerminalType] = new OptionalRule[R, TerminalType](this)
+  final def +[R >: ProductType] : NonEmptyList[R, TerminalType] = new NonEmptyList[R, TerminalType](this)
+  final def *[R >: ProductType]: PossibleEmptyList[R, TerminalType] = new PossibleEmptyList[R, TerminalType](this)
+  def ~[L](other: Rule[L, TerminalType]) : NonTerminalState[TerminalType] = new NonTerminalState[TerminalType](List(this, other))
+  def produce(l: Producer[TerminalType]): Option[(ProductType, Producer[TerminalType])]
+  //def apply[R1 >: ProductType, R](matcher: R1 => R) = new BasicTransformer[R1, TerminalType, R](this, matcher)
 }
 
 class NonEmptyList[T, K](val underlying: Rule[T, K]) extends Rule[List[T], K] {
@@ -26,7 +34,7 @@ class NonEmptyList[T, K](val underlying: Rule[T, K]) extends Rule[List[T], K] {
     }.getOrElse(None)
   }
 
-  //def apply[R](matcher: List[T] => R) = new SimpleTransformer(matcher)
+  def apply[R](matcher: List[T] => R) = new BasicTransformer(this, matcher)
 }
 
 class PossibleEmptyList[T, K](val underlying: Rule[T, K]) extends Rule[List[T], K] {
@@ -35,6 +43,8 @@ class PossibleEmptyList[T, K](val underlying: Rule[T, K]) extends Rule[List[T], 
   override def produce(l: Producer[K]): Option[(List[T], Producer[K])] = {
     internalProduct(underlying, new ListBuffer[T](), l)
   }
+
+  def apply[R](matcher: List[T] => R) = new BasicTransformer(this, matcher)
 }
 
 class OptionalRule[T, K](val underlying: Rule[T, K]) extends Rule[Option[T], K] {
@@ -43,28 +53,28 @@ class OptionalRule[T, K](val underlying: Rule[T, K]) extends Rule[Option[T], K] 
       .getOrElse(Some(None, l))
   }
 
-  //def apply[R](matcher: Option[T] => R) = new OptionalTransformer(this, matcher)
+  def apply[R](matcher: Option[T] => R) = new BasicTransformer(this, matcher)
 }
 
-class NonTerminalState[T](val rules: List[Rule[_, T]]) extends Rule[List[_], T] {
+class NonTerminalState[T](val rules: List[Rule[_, T]]) extends Rule[List[Any], T] {
   override def ~[L](other: Rule[L, T]): NonTerminalState[T] =
     new NonTerminalState[T](rules :+ other)
 
-  override def produce(l: Producer[T]): Option[(List[_], Producer[T])] = {
-    def productFold(values: ListBuffer[Any], rs: List[Rule[_, T]], p: Producer[T]): Option[(List[_], Producer[T])] = {
-        rs match {
-          case Nil => Some(values.toList, p)
-          case head :: tail =>
-            head.produce(p).map {
-              case (result, producer) => productFold(values += result, tail, producer)
-            }.getOrElse(None)
-        }
+  override def produce(l: Producer[T]): Option[(List[Any], Producer[T])] = {
+    def productFold(values: ListBuffer[Any], rs: List[Rule[_, T]], p: Producer[T]): Option[(List[Any], Producer[T])] = {
+      rs match {
+        case Nil => Some(values.toList, p)
+        case head :: tail =>
+          head.produce(p).map {
+            case (result, producer) => productFold(values += result, tail, producer)
+          }.getOrElse(None)
+      }
     }
 
     productFold(new ListBuffer[Any](), rules, l)
   }
 
-  //def apply[R](matcher: List[Any] => R) = new ListTransformer(this, matcher)
+  def apply[R](m: List[Any] => R) = new BasicTransformer(this, m)
 }
 
 trait TerminalState[T] extends Rule[T, T] {
@@ -77,7 +87,7 @@ trait TerminalState[T] extends Rule[T, T] {
 
   def valueMatches(t: T): Boolean
 
-  //def apply[R](matcher: T => R) = new SimpleTransformer(this, matcher)
+  def apply[R](m: T => R) = new BasicTransformer(this, m)
 }
 
 class SimpleTerminalState[T](val v: T) extends TerminalState[T] {

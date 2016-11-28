@@ -7,8 +7,8 @@ import com.rokuan.autoroute.rules._
 /**
   * Created by Christophe on 23/11/2016.
   */
-trait Transformer[T <: Any, K, R] extends Rule[R, K]{
-  def |[S <: Any](transformer: BasicTransformer[S, K, R]): Transformer[Any, K, R]
+trait Transformer[T <: Any, K, +R] extends Rule[R, K]{
+  def |[R1 >: R, S <: Any](transformer: BasicTransformer[S, K, R1]): Transformer[Any, K, R1]
 }
 
 class BasicTransformer[T, K, R](val rule: Rule[T, K], val transform: T => R) extends Transformer[T, K, R] {
@@ -17,10 +17,12 @@ class BasicTransformer[T, K, R](val rule: Rule[T, K], val transform: T => R) ext
       case (result, left) => Some(transform(result), left)
     }.getOrElse(None)
 
-  override def |[S <: Any](transformer: BasicTransformer[S, K, R]): Transformer[Any, K, R] = new MultipleTransformer[K, R](this :: transformer :: Nil)
+  //override def |[S <: Any](transformer: BasicTransformer[S, K, R]): Transformer[Any, K, R] = new MultipleTransformer[K, R](this :: transformer :: Nil)
+  override def |[R1 >: R, S <: Any](transformer: BasicTransformer[S, K, R1]): Transformer[Any, K, R1] =
+    new MultipleTransformer[K, R1](List(this, transformer))
 }
 
-class MultipleTransformer[K, R](val transformers: List[Transformer[_ <: Any, K, R]]) extends Transformer[Any, K, R] {
+class MultipleTransformer[K, R <: Any](val transformers: List[Transformer[_ <: Any, K, R]]) extends Transformer[Any, K, R] {
   override def produce(p: Producer[K]): Option[(R, Producer[K])] = {
     def internalProduct(ts: List[Transformer[_ <: Any, K, R]], p: Producer[K]): Option[(R, Producer[K])] = {
       ts match {
@@ -34,6 +36,6 @@ class MultipleTransformer[K, R](val transformers: List[Transformer[_ <: Any, K, 
     internalProduct(transformers, p)
   }
 
-  override def |[S <: Any](transformer: BasicTransformer[S, K, R]): Transformer[Any, K, R] =
-    new MultipleTransformer[K, R](transformers :+ transformer)
+  override def |[R1 >: R, S <: Any](transformer: BasicTransformer[S, K, R1]): Transformer[Any, K, R1] =
+    new MultipleTransformer[K, R1](transformers :+ transformer)
 }

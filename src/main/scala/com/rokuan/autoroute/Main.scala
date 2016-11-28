@@ -5,6 +5,7 @@ import com.rokuan.autoroute.matchers.Route
 
 object Main {
   import com.rokuan.autoroute.rules.Rule._
+  import shapeless.tupled._
 
   def main(args: Array[String]): Unit = {
     val path = token(4) ~ opt(token(8))
@@ -21,5 +22,23 @@ object Main {
     val buffer = List(8, 7, 7, 2, 4)
     val v = new Route(finalRoute)(buffer)
     println(v)
+
+    /*val path = token(4) ~ opt(token(8))
+
+    val route = path { l: List[Any] =>
+      val List(a: Int, b: Option[Int]) = l
+      a + b.getOrElse(0)
+    } | (list(token(7)) ~ list(token(2))) { l: List[Any] =>
+      val List(a: List[Int], b: List[Int]) = l
+      a.length + b.length
+    }
+
+    val finalRoute = (token(8) ~ route ~ token(4)) { l: List[Any] =>
+      val List(a: Int, b: Int, c: Int) = l
+      a + "/" + b + "/" + c
+    }
+    val buffer = List(8, 7, 7, 2, 4)
+    val v = new Route(finalRoute)(buffer)
+    println(v)*/
   }
 }
