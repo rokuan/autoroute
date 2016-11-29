@@ -20,6 +20,8 @@ class BasicTransformer[T, K, R](val rule: Rule[T, K], val transform: T => R) ext
   //override def |[S <: Any](transformer: BasicTransformer[S, K, R]): Transformer[Any, K, R] = new MultipleTransformer[K, R](this :: transformer :: Nil)
   override def |[R1 >: R, S <: Any](transformer: BasicTransformer[S, K, R1]): Transformer[Any, K, R1] =
     new MultipleTransformer[K, R1](List(this, transformer))
+
+  def apply[S](matcher: R => S) = new BasicTransformer(this, matcher)
 }
 
 class MultipleTransformer[K, R <: Any](val transformers: List[Transformer[_ <: Any, K, R]]) extends Transformer[Any, K, R] {
@@ -38,4 +40,6 @@ class MultipleTransformer[K, R <: Any](val transformers: List[Transformer[_ <: A
 
   override def |[R1 >: R, S <: Any](transformer: BasicTransformer[S, K, R1]): Transformer[Any, K, R1] =
     new MultipleTransformer[K, R1](transformers :+ transformer)
+
+  def apply[S](matcher: R => S) = new BasicTransformer(this, matcher)
 }
