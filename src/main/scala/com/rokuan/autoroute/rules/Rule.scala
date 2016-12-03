@@ -2,7 +2,6 @@ package com.rokuan.autoroute.rules
 
 import com.rokuan.autoroute.Producer
 import com.rokuan.autoroute.matchers._
-import shapeless.HList
 
 import scala.collection.mutable.ListBuffer
 
@@ -10,19 +9,11 @@ import scala.collection.mutable.ListBuffer
   * Created by Christophe on 21/11/2016.
   */
 trait Rule[+ProductType <: Any, TerminalType] {
-  /*final def ? : OptionalRule[ProductType, TerminalType] = new OptionalRule[ProductType, TerminalType](this)
-  final def + : NonEmptyList[ProductType, TerminalType] = new NonEmptyList[ProductType, TerminalType](this)
-  final def * : PossibleEmptyList[ProductType, TerminalType] = new PossibleEmptyList[ProductType, TerminalType](this)
-  def ~[L](other: Rule[L, TerminalType]) : NonTerminalState[TerminalType] = new NonTerminalState[TerminalType](List(this, other))
-  def produce(l: Producer[TerminalType]): Option[(ProductType, Producer[TerminalType])]
-  def apply[R](matcher: ProductType => R) = new BasicTransformer(this, matcher)*/
-
   final def ?[R >: ProductType]: OptionalRule[R, TerminalType] = new OptionalRule[R, TerminalType](this)
   final def +[R >: ProductType] : NonEmptyList[R, TerminalType] = new NonEmptyList[R, TerminalType](this)
   final def *[R >: ProductType]: PossibleEmptyList[R, TerminalType] = new PossibleEmptyList[R, TerminalType](this)
   def ~[L](other: Rule[L, TerminalType]) : NonTerminalState[TerminalType] = new NonTerminalState[TerminalType](List(this, other))
   def produce(l: Producer[TerminalType]): Option[(ProductType, Producer[TerminalType])]
-  //def apply[R1 >: ProductType, R](matcher: R1 => R) = new BasicTransformer[R1, TerminalType, R](this, matcher)
 }
 
 class NonEmptyList[T, K](val underlying: Rule[T, K]) extends Rule[List[T], K] {

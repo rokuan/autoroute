@@ -9,6 +9,7 @@ import com.rokuan.autoroute.rules._
   */
 trait Transformer[T <: Any, K, +R] extends Rule[R, K]{
   def |[R1 >: R, S <: Any](transformer: BasicTransformer[S, K, R1]): Transformer[Any, K, R1]
+  def apply[R1 >: R, S](matcher: R1 => S) = new BasicTransformer[R1, K, S](this, matcher)
 }
 
 class BasicTransformer[T, K, +R](val rule: Rule[T, K], val transform: T => R) extends Transformer[T, K, R] {
@@ -17,11 +18,10 @@ class BasicTransformer[T, K, +R](val rule: Rule[T, K], val transform: T => R) ex
       case (result, left) => Some(transform(result), left)
     }.getOrElse(None)
 
-  //override def |[S <: Any](transformer: BasicTransformer[S, K, R]): Transformer[Any, K, R] = new MultipleTransformer[K, R](this :: transformer :: Nil)
   override def |[R1 >: R, S <: Any](transformer: BasicTransformer[S, K, R1]): Transformer[Any, K, R1] =
     new MultipleTransformer[K, R1](List(this, transformer))
 
-  def apply[R1 >: R, S](matcher: R1 => S) = new BasicTransformer[R1, K, S](this, matcher)
+  override def apply[R1 >: R, S](matcher: R1 => S) = new BasicTransformer[R1, K, S](this, matcher)
 }
 
 class MultipleTransformer[K, +R](val transformers: List[Transformer[_ <: Any, K, R]]) extends Transformer[Any, K, R] {
@@ -41,5 +41,5 @@ class MultipleTransformer[K, +R](val transformers: List[Transformer[_ <: Any, K,
   override def |[R1 >: R, S <: Any](transformer: BasicTransformer[S, K, R1]): Transformer[Any, K, R1] =
     new MultipleTransformer[K, R1](transformers :+ transformer)
 
-  def apply[R1 >: R, S](matcher: R1 => S) = new BasicTransformer[R1, K, S](this, matcher)
+  override def apply[R1 >: R, S](matcher: R1 => S) = new BasicTransformer[R1, K, S](this, matcher)
 }
